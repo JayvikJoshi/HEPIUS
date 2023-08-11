@@ -42,6 +42,10 @@ def crop_image(image):
     cropped_image = cropped_image[bounding_rect[1]:bounding_rect[1] + bounding_rect[3], bounding_rect[0]:bounding_rect[0] + bounding_rect[2]]
     return cropped_image
 
+def get_mean_stdev(image):
+    mean, stdev = cv2.meanStdDev(image)[0][0][0], cv2.meanStdDev(image)[1][0][0]
+    return mean, stdev
+
 def apply_gaussian_blur(image, kernel_size=(5,5)):
     return cv2.GaussianBlur(image, kernel_size, 0)
 
@@ -69,41 +73,92 @@ def create_contour_dictionary_list(contours):
             contours_dictionary_list.append(contour_dictionary)
     return contours_dictionary_list
 
-def filter_contours_percent(contours_dictionary_list, percent_area=100, percent_circularity=100, percent_compactness=100):
-    
+def filter_contours_percent(contours_dictionary_list, area_percent=100, circularity_percent=100, compactness_percent=100):
+    #area filter
     area_sorted = sorted(contours_dictionary_list, key=lambda contour: contour["area"], reverse=True)
-    area_threshold = int(len(area_sorted) * percent_area / 100)
-    area_filtered = area_sorted[:area_threshold]
-
+    area_idx = int(len(area_sorted) * area_percent / 100)
+    area_filtered = area_sorted[:area_idx]
+    #circ filter
     circularity_sorted = sorted(area_filtered, key=lambda contour: contour["circularity"], reverse=True)
-    circularity_threshold = int(len(circularity_sorted) * percent_circularity / 100)
-    circularity_filtered = circularity_sorted[:circularity_threshold]
-
-
+    circularity_idx = int(len(circularity_sorted) * circularity_percent / 100)
+    circularity_filtered = circularity_sorted[:circularity_idx]
+    #comp filter
     compactness_sorted = sorted(circularity_filtered, key=lambda contour: contour["compactness"], reverse=True)
-    compactness_threshold = int(len(compactness_sorted) * percent_compactness / 100)
-    compactness_filtered = compactness_sorted[:compactness_threshold]
+    compactness_idx = int(len(compactness_sorted) * compactness_percent / 100)
+    compactness_filtered = compactness_sorted[:compactness_idx]
+
+    filtered = compactness_filtered
+    return filtered
+
+def filter_contours_number(contours_dictionary_list, area_idx=-1, circularity_idx = -1, compactness_idx=-1):
+    
+    area_idx = len(contours_dictionary_list) if area_idx == -1 else area_idx
+    circularity_idx = len(contours_dictionary_list) if circularity_idx == -1 else circularity_idx
+    compactness_idx = len(contours_dictionary_list) if compactness_idx == -1 else compactness_idx
+    #area filter
+    area_sorted = sorted(contours_dictionary_list, key=lambda contour: contour["area"], reverse=True)
+    area_filtered = area_sorted[:area_idx]
+    #circ filter
+    circularity_sorted = sorted(area_filtered, key=lambda contour: contour["circularity"], reverse=True)
+    circularity_filtered = circularity_sorted[:circularity_idx]
+    #comp filter
+    compactness_sorted = sorted(circularity_filtered, key=lambda contour: contour["compactness"], reverse=True)
+    compactness_filtered = compactness_sorted[:compactness_idx]
+    
+    filtered = compactness_filtered
+    return filtered
+
+def filter_contours_thresh(contours_dictionary_list, area_thresh = 0, circularity_thresh = 0, compactness_thresh = 0):
+    #area filter
+    area_sorted = sorted(contours_dictionary_list, key=lambda contour: contour["area"], reverse=True)
+    for index, contour in enumerate(contours_dictionary_list):
+        area_idx = index
+        if contour["area"] <= area_thresh:
+            break
+    area_filtered = area_sorted[:area_idx]
+    #circ filter
+    circularity_sorted = sorted(area_filtered, key=lambda contour: contour["circularity"], reverse=True)
+    for index, contour in enumerate(area_filtered):
+        circularity_idx = index
+        if contour["circularity"] <= circularity_thresh:
+            break
+    circularity_filtered = circularity_sorted[:circularity_idx]
+    #comp filter
+    compactness_sorted = sorted(circularity_filtered, key=lambda contour: contour["compactness"], reverse=True)
+    for index, contour in enumerate(circularity_filtered):
+        compactness_idx = index
+        if contour["circularity"] <= compactness_thresh:
+            break 
+    compactness_filtered = compactness_sorted[:compactness_idx]    
     filtered = compactness_filtered
 
     return filtered
 
-def filter_contours_number(contours_dictionary_list, n_area=-1, n_circularity = -1, n_compactness=-1):
-    n_area = len(contours_dictionary_list) if n_area == -1 else n_area
-    n_circularity = len(contours_dictionary_list) if n_circularity == -1 else n_circularity
-    n_compactness = len(contours_dictionary_list) if n_compactness == -1 else n_compactness
+def filter_contours_weight(contours_dictionary_list, n=-1, area_weight=0, circularity_weight=0, compactness_weight=0):
+    n = len(contours_dictionary_list) if n == -1 else n
+
     
-    area_sorted = sorted(contours_dictionary_list, key=lambda contour: contour["area"], reverse=True)
-    area_filtered = area_sorted[:n_area]
+    area_list = [contour["area"] for contour in contours_dictionary_list]
+    circularity_list = [contour["circularity"] for contour in contours_dictionary_list]
+    compactness_list = [contour["compactness"] for contour in contours_dictionary_list]
+    
+    norm_contours_dictionary_list = []
+    for contour in contours_dictionary_list:
+        norm_contour_dictionary = {}
+        norm_contour_dictionary["contour"] = contour["contour"]
+        norm_contour_dictionary["area"] = (contour["area"] - min(area_list)) / (max(area_list) - min(area_list))
+        norm_contour_dictionary["circularity"] = (contour["circularity"] - min(circularity_list)) / (max(circularity_list) - min(circularity_list))
+        norm_contour_dictionary["compactness"] = (contour["compactness"] - min(compactness_list)) / (max(compactness_list) - min(compactness_list))
+        norm_contour_dictionary["weighted_score"] = contour["area"] * area_weight + contour["circularity"] * circularity_weight + contour["compactness"] * compactness_weight
+        norm_contours_dictionary_list.append(norm_contour_dictionary)
 
-    circularity_sorted = sorted(area_filtered, key=lambda contour: contour["circularity"], reverse=True)
-    circularity_filtered = circularity_sorted[:n_circularity]
-
-
-    compactness_sorted = sorted(circularity_filtered, key=lambda contour: contour["compactness"], reverse=True)
-    compactness_filtered = compactness_sorted[:n_compactness]
-    filtered = compactness_filtered
-
-    return filtered
+    weight_sorted = sorted(norm_contours_dictionary_list, key=lambda contour: contour["weighted_score"], reverse=True)
+    
+    for contour in weight_sorted:
+        print(contour["area"], contour["circularity"], contour["compactness"])
+    
+    weight_filtered = weight_sorted[:n]
+    return weight_filtered
 
 def visualize_contours(image, contours):
     image_with_contours = np.copy(cv2.cvtColor(image, cv2.COLOR_GRAY2RGB))
@@ -129,22 +184,20 @@ if __name__ == "__main__":
         output_list = []
         img = load_image(img)
         image = crop_image(img)
-        mean, stdev = cv2.meanStdDev(image)[0][0][0], cv2.meanStdDev(image)[1][0][0]
-        
-        i = stdev * 0.2
+        mean, stdev = get_mean_stdev(image)
+
+        i = stdev * 0.1
         k = round(i) if round(i) % 2 == 1 else round(i)-1
         p = 0.8
         gauss = apply_gaussian_blur(image, (k,k))
         bin = perform_thresholding(gauss, mean+stdev*p)
         
         contours = find_contours(bin)
-        contour_image = visualize_contours(image, contours) 
-
+        contour_image = visualize_contours(image, contours)
         contours_dictionary_list = create_contour_dictionary_list(contours)
+        filtered = filter_contours_weight(contours_dictionary_list, 2, 1, 1, 1)
         
-        filtered = filter_contours_percent(contours_dictionary_list, 10, 100, 100)
         filtered_contours = [contour["contour"] for contour in filtered]
-      
         contour_filtered_image = visualize_contours(image, filtered_contours)
 
         # output_list.append(img) #original
@@ -153,7 +206,6 @@ if __name__ == "__main__":
         # output_list.append(bin) #binarized
         # output_list.append(contour_image) #all contours
         output_list.append(contour_filtered_image) #filtered contours
-        
         display_images_opencv(output_list)
 
         # dp = 1  # Inverse ratio of the accumulator resolution to the image resolution (1 means the same resolution)
