@@ -142,7 +142,6 @@ if __name__ == "__main__":
 
         contours_dictionary_list = create_contour_dictionary_list(contours)
         
-        
         filtered = filter_contours_percent(contours_dictionary_list, 10, 100, 100)
         filtered_contours = [contour["contour"] for contour in filtered]
       
@@ -154,7 +153,7 @@ if __name__ == "__main__":
         # output_list.append(bin) #binarized
         # output_list.append(contour_image) #all contours
         output_list.append(contour_filtered_image) #filtered contours
-
+        
         display_images_opencv(output_list)
 
         # dp = 1  # Inverse ratio of the accumulator resolution to the image resolution (1 means the same resolution)
@@ -179,5 +178,5 @@ if __name__ == "__main__":
             
         
         
-        #2_3mm_no_boxes -> threshold at 175, size (0.001, 0.1), circularity (0.1, 1), compactness (0.1, 1)
-        #2_20mm_no_boxes -> threshoold at 100, size (0.03, 1), circularity (0.03, 1), compactness (0.03, 1)
+        # 2_3mm_no_boxes -> threshold at 175, size (0.001, 0.1), circularity (0.1, 1), compactness (0.1, 1)
+        # 2_20mm_no_boxes -> threshoold at 100, size (0.03, 1), circularity (0.03, 1), compactness (0.03, 1)
