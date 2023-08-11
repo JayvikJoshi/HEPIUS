@@ -2,8 +2,8 @@ import os
 
 save_down = True
 
-input_path = r'C:\Users\jayvi\Desktop\HEPIUS\CottonBalls\datasets\2_20mm_no_box.png'
-output_path = r'C:\Users\jayvi\Desktop\HEPIUS\CottonBalls\datasets\\'
+input_path = "/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/datasets/"
+output_path = "/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/output/"
 
 og_img_height = 768
 og_img_width = 1024
