@@ -121,7 +121,6 @@ def filter_contours_number(contours_dictionary_list, area_idx=-1, circularity_id
     return filtered
 
 def filter_contours_thresh(contours_dictionary_list, area_thresh=0, circularity_thresh=0, compactness_thresh=0):
-
     filters = [
         ("area", area_thresh),
         ("circularity", circularity_thresh),
