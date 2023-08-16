@@ -199,7 +199,7 @@ if __name__ == "__main__":
         contours = find_contours(bin)
         contour_image = visualize_contours(image, contours)
         contours_dictionary_list = create_contour_dictionary_list(contours)
-        filtered = filter_contours_weight(contours_dictionary_list, 2, area_weight = 1, circularity_weight = 1, compactness_weight = 1)
+        filtered = filter_contours_percent(contours_dictionary_list, 10, 100, 100)
         
         filtered_contours = [contour["contour"] for contour in filtered]
         contour_filtered_image = visualize_contours(image, filtered_contours)
