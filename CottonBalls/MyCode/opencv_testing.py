@@ -1,4 +1,5 @@
 import cv2
+import csv
 import numpy as np
 import config
 import os
@@ -201,7 +202,7 @@ def calculate_iou(box1, box2):
     
     return iou
 
-def calculate_iou_matrix(estimate_bboxes, gt_bboxes):
+def calculate_iou_matrix(estimate_bboxes, gt_bboxes, output_csv=False):
     iou_matrix = []
     for estimate_bbox in estimate_bboxes:
         max_iou = 0.0
@@ -209,7 +210,16 @@ def calculate_iou_matrix(estimate_bboxes, gt_bboxes):
             iou_value = calculate_iou(estimate_bbox, gt_bbox)
             max_iou = max(max_iou, iou_value)
         iou_matrix.append(max_iou)
-    return iou_matrix
+    accuracy = sum(iou_matrix) / len(iou_matrix)
+
+    if output_csv:
+        data_to_append = iou_matrix + [accuracy]
+        csv_filename = "/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/output/output_csv.csv"
+        with open(csv_filename, 'a', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow(data_to_append)
+
+    return iou_matrix, accuracy
 
 if __name__ == "__main__":
     data_dir = "/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/datasets/"
@@ -230,8 +240,8 @@ if __name__ == "__main__":
         real_img = load_image(img_path[:-10]+'boxes.png')
         real_bboxes_list = find_boxes(real_img, show_image)
         
-        print(calculate_iou_matrix(bboxes_list, real_bboxes_list))
-
+        iou_matrix, accuracy = calculate_iou_matrix(bboxes_list, real_bboxes_list, output_csv=True)
+        print(iou_matrix, accuracy)
 
     #     # 2_3mm_no_boxes -> threshold at 175, size (0.001, 0.1), circularity (0.1, 1), compactness (0.1, 1)
     #     # 2_20mm_no_boxes -> threshoold at 100, size (0.03, 1), circularity (0.03, 1), compactness (0.03, 1)
