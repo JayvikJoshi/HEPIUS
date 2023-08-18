@@ -13,34 +13,8 @@ def get_img_list(directory):
     return filepaths
 
 def load_image(image_path):
-    return cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    return cv2.imread(image_path, cv2.IMREAD_ANYCOLOR)
 
-def crop_image(image):
-    grayscale_image = image
-    threshold = 1
-    binary_image = cv2.threshold(grayscale_image, threshold, 255, cv2.THRESH_BINARY)[1]
-
-    # Find the contours in the binary image.
-    contours, hierarchy = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Find the largest contour, which should be the ultrasound image.
-    largest_contour = None
-    largest_area = 0
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if area > largest_area:
-            largest_contour = contour
-            largest_area = area
-
-    # Crop the image to the largest contour.
-    cropped_image = cv2.drawContours(image, [largest_contour], -1, (0, 255, 0), 3)
-
-    # Get the bounding rectangle of the contour.
-    bounding_rect = cv2.boundingRect(largest_contour)
-
-    # Crop the image to the bounding rectangle.
-    cropped_image = cropped_image[bounding_rect[1]:bounding_rect[1] + bounding_rect[3], bounding_rect[0]:bounding_rect[0] + bounding_rect[2]]
-    return cropped_image
 
 def get_mean_stdev(image):
     mean, stdev = cv2.meanStdDev(image)[0][0][0], cv2.meanStdDev(image)[1][0][0]
@@ -53,11 +27,11 @@ def perform_thresholding(image, threshold_value, max_value=255, threshold_type=c
     _, binary_threshold = cv2.threshold(image, threshold_value, max_value, threshold_type)
     return binary_threshold
 
-def find_contours(binary_image):
-    contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+def find_contours(image):
+    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
-def create_contour_dictionary_list(contours):
+def create_contour_dictionaryList(contours):
     contours_dictionary_list = []
 
     for contour in contours:
@@ -88,7 +62,7 @@ def create_contour_dictionary_list(contours):
     return contours_dictionary_list
 
 
-def filter_contours_percent(contours_dictionary_list, area_percent=100, circularity_percent=100, compactness_percent=100):
+def filter_percent(contours_dictionary_list, area_percent=100, circularity_percent=100, compactness_percent=100):
     filters = [
         ("area", area_percent),
         ("circularity", circularity_percent),
@@ -104,7 +78,7 @@ def filter_contours_percent(contours_dictionary_list, area_percent=100, circular
 
     return filtered
 
-def filter_contours_number(contours_dictionary_list, area_idx=-1, circularity_idx = -1, compactness_idx=-1):
+def filter_top_n(contours_dictionary_list, area_idx=-1, circularity_idx = -1, compactness_idx=-1):
     filters = [
         ("area", area_idx),
         ("circularity", circularity_idx),
@@ -120,7 +94,7 @@ def filter_contours_number(contours_dictionary_list, area_idx=-1, circularity_id
 
     return filtered
 
-def filter_contours_thresh(contours_dictionary_list, area_thresh=0, circularity_thresh=0, compactness_thresh=0):
+def filter_value(contours_dictionary_list, area_thresh=0, circularity_thresh=0, compactness_thresh=0):
     filters = [
         ("area", area_thresh),
         ("circularity", circularity_thresh),
@@ -135,7 +109,7 @@ def filter_contours_thresh(contours_dictionary_list, area_thresh=0, circularity_
     return filtered
 
 
-def filter_contours_weight(contours_dictionary_list, n=-1, area_weight=0, circularity_weight=0, compactness_weight=0):
+def filter_weighted(contours_dictionary_list, n=-1, area_weight=0, circularity_weight=0, compactness_weight=0):
     filters = [
         ("area", area_weight),
         ("circularity", circularity_weight),
@@ -158,81 +132,129 @@ def filter_contours_weight(contours_dictionary_list, n=-1, area_weight=0, circul
     weight_filtered = sorted(contours_dictionary_list, key=lambda contour: contour["weighted_score"], reverse=True)[:n]
     return weight_filtered
 
+def display_contours(image, contours):
+    contours_image = np.copy(image)
+    cv2.drawContours(contours_image, contours, -1, (255, 0, 255), 3)
+    return contours_image
 
-
-
-
-
-
-def visualize_contours(image, contours):
-    image_with_contours = np.copy(cv2.cvtColor(image, cv2.COLOR_GRAY2RGB))
-    cv2.drawContours(image_with_contours, contours, -1, (255, 0, 255), 3)
-    return image_with_contours
-
-def display_images_opencv(images):
-    for i, image in enumerate(images):
+def display_images(image_list):
+    for i, image in enumerate(image_list):
         cv2.imshow(f"Image {i+1}" + str(image), image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def hough_circle_transform(image, dp, min_dist, param1, param2, min_radius, max_radius):
-    blurred_image = cv2.GaussianBlur(image, (9, 9), 2)
-    circles = cv2.HoughCircles(blurred_image, cv2.HOUGH_GRADIENT, dp, min_dist, param1=param1, param2=param2, minRadius=min_radius, maxRadius=max_radius)
-    return circles
+def correct_bboxes(image, bboxes_list):
+    _, crop_dimensions = crop_image(image)
+    corr_bboxes_list = []
+    for bbox_value in bboxes_list:
+        bbox_value_list, crop_dimensions_list = list(bbox_value), list(crop_dimensions)
+        corr_bbox_value = tuple([x + y for x, y in zip(bbox_value_list, crop_dimensions_list)])
+        corr_bboxes_list.append(corr_bbox_value)
+
+    corr_bboxes_image = np.copy(image)
+    for corr_bbox_value in corr_bboxes_list:
+        x_min, y_min, width, height = corr_bbox_value
+        cv2.rectangle(corr_bboxes_image, (x_min, y_min), (x_min + width, y_min + height), (0, 255, 0), 2)
+
+    return corr_bboxes_image, corr_bboxes_list
+
+def preprocess(image, gauss_val, thresh_val, show_images=False): #input image
+    grayscale_image = np.copy(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
+    k = round(gauss_val) if round(gauss_val) % 2 == 1 else round(gauss_val)-1
+    gauss_blurred_image = apply_gaussian_blur(grayscale_image, (k,k))
+    binary_image = perform_thresholding(gauss_blurred_image, thresh_val)
+
+    if show_images:
+        display_images([image, cropped_image, gauss_blurred_image, binary_image])
+
+    return binary_image
+
+def isolate_contours(image, preprocessed_image, n, area_weight, circ_weight, comp_weight, show_images=True): #input preprocessed image
+    contours, _ = cv2.findContours(preprocessed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_dictionaryList = create_contour_dictionaryList(contours)
+    filtered_dictionaryList = filter_weighted(contours_dictionaryList, n, area_weight, circ_weight, comp_weight)
+    filtered_contours = [contour["contour"] for contour in filtered_dictionaryList]
+    if show_images:
+        display_images([display_contours(image, filtered_contours)])
+    return filtered_contours
+
+def draw_boxes(image, contours, show_images=False): #input original image and filtered contours
+    bboxes_image = np.copy(image)
+    bboxes_list = []
+    for contour in contours:
+        bounding_rect = cv2.boundingRect(contour)
+        bboxes_list.append(bounding_rect)
+        cv2.rectangle(bboxes_image, (bounding_rect[0], bounding_rect[1]),(bounding_rect[0] + bounding_rect[2], bounding_rect[1] + bounding_rect[3]),(0, 255, 0), 3)
+    corr_bboxes_image, corr_bboxes_list = bboxes_image, bboxes_list #correct_bboxes(image, bboxes_list)
+    if show_images:
+        display_images([image, bboxes_image, corr_bboxes_image])
+    return corr_bboxes_list
+
+def crop_image(image): #rewrite this in terms of preprocess, etc.
+    preprocessed_image = preprocess(image, gauss_val = 1, thresh_val = 1, show_images = False)
+    filtered_contours = isolate_contours(image, preprocessed_image, 1, 100, 0, 0, False)
+    largest_contour = filtered_contours[0]
+    bounding_rect = cv2.boundingRect(largest_contour)
+    cropped_image = image[bounding_rect[1]:bounding_rect[1] + bounding_rect[3], bounding_rect[0]:bounding_rect[0] + bounding_rect[2]]
+    crop_dimensions = (bounding_rect[0], bounding_rect[1], 0, 0)
+    return cropped_image, crop_dimensions
 
 
+def find_boxes(image, show_images=True):
+    lower_yellow = np.array([0, 100, 100])
+    upper_yellow = np.array([1, 255, 255])
+    yellow_mask = cv2.inRange(image, lower_yellow, upper_yellow)
+    contours, _ = cv2.findContours(yellow_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    bboxes_image = np.copy(cv2.cvtColor(image, cv2.COLOR_GRAY2BGR))
+    bboxes_list = []
+    for contour in contours:
+        bounding_rect = cv2.boundingRect(contour)
+        bboxes_list.append(bounding_rect)
+        cv2.rectangle(bboxes_image, (bounding_rect[0], bounding_rect[1]),(bounding_rect[0] + bounding_rect[2], bounding_rect[1] + bounding_rect[3]),(0, 255, 0), 3)
+    if show_images:
+        display_images([bboxes_image])
+    return bboxes_list
+
+def calculate_iou(box1, box2):
+    x1_real, y1_real, w1_real, h1_real = box1
+    x2_real, y2_real, w2_real, h2_real = x1_real + w1_real, y1_real + h1_real, w1_real, h1_real
+    x1_est, y1_est, w1_est, h1_est = box2
+    x2_est, y2_est, w2_est, h2_est = x1_est + w1_est, y1_est + h1_est, w1_est, h1_est
+
+    x_left = max(x1_real, x1_est)
+    y_top = max(y1_real, y1_est)
+    x_right = min(x2_real, x2_est)
+    y_bottom = min(y2_real, y2_est)
+
+    if x_right < x_left or y_bottom < y_top:
+        return 0.0
+
+    intersection_area = (x_right - x_left) * (y_bottom - y_top)
+    box1_area = w1_real * h1_real
+    box2_area = w1_est * h1_est
+    union_area = box1_area + box2_area - intersection_area
+
+    iou = intersection_area / union_area
+    return iou
+
+    
 
 if __name__ == "__main__":
-    img_list = get_img_list(config.input_path)
-    for img in img_list:
-        output_list = []
-        img = load_image(img)
-        image = crop_image(img)
-        mean, stdev = get_mean_stdev(image)
+    img = load_image("/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/datasets/3_5mm_no_box.png")
+    real_img = load_image("/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/datasets/3_5mm_boxes.png")
+    
 
-        i = stdev * 0.1
-        k = round(i) if round(i) % 2 == 1 else round(i)-1
-        p = 0.8
-        gauss = apply_gaussian_blur(image, (k,k))
-        bin = perform_thresholding(gauss, mean+stdev*p)
-        
-        contours = find_contours(bin)
-        contour_image = visualize_contours(image, contours)
-        contours_dictionary_list = create_contour_dictionary_list(contours)
-        filtered = filter_contours_percent(contours_dictionary_list, 10, 100, 100)
-        
-        filtered_contours = [contour["contour"] for contour in filtered]
-        contour_filtered_image = visualize_contours(image, filtered_contours)
+    cropped_image, _ = crop_image(img)
+    mean, stdev = get_mean_stdev(cropped_image)
+    gauss_val = stdev * 0.1
+    thresh_val = mean + stdev * 0.8
 
-        # output_list.append(img) #original
-        # output_list.append(image) #cropped
-        # output_list.append(gauss) #gauss blurred
-        # output_list.append(bin) #binarized
-        # output_list.append(contour_image) #all contours
-        output_list.append(contour_filtered_image) #filtered contours
-        display_images_opencv(output_list)
+    preprocessed_image = preprocess(img, gauss_val, thresh_val, True)
+    filtered_contours = isolate_contours(img, preprocessed_image, 2, 100, 2, 2, True)
+    bboxes_list = draw_boxes(img, filtered_contours, True)
+    real_bboxes_list = find_boxes(real_img, True)
 
-        # dp = 1  # Inverse ratio of the accumulator resolution to the image resolution (1 means the same resolution)
-        # min_dist = 50  # Minimum distance between the centers of detected circles
-        # param1 = 80  # Upper threshold for the internal Canny edge detector
-        # param2 = 30  # Threshold for center detection.
-        # min_radius = 10  # Minimum circle radius
-        # max_radius = 100  # Maximum circle radius
 
-        # circles = hough_circle_transform(img, dp, min_dist, param1, param2, min_radius, max_radius)
-        # if circles is not None:
-        #     circles = np.uint16(np.around(circles))
-        #     for circle in circles[0, :]:
-        #         center = (circle[0], circle[1])
-        #         radius = circle[2]
-        #         # Draw the circle on the original image
-        #         cv2.circle(img, center, radius, (0, 255, 0), 2)
 
-        #     cv2.imshow("Hough Circle Transform", img)
-        #     cv2.waitKey(0)
-        #     cv2.destroyAllWindows()
-            
-        
-        
-        # 2_3mm_no_boxes -> threshold at 175, size (0.001, 0.1), circularity (0.1, 1), compactness (0.1, 1)
-        # 2_20mm_no_boxes -> threshoold at 100, size (0.03, 1), circularity (0.03, 1), compactness (0.03, 1)
+    #     # 2_3mm_no_boxes -> threshold at 175, size (0.001, 0.1), circularity (0.1, 1), compactness (0.1, 1)
+    #     # 2_20mm_no_boxes -> threshoold at 100, size (0.03, 1), circularity (0.03, 1), compactness (0.03, 1)
