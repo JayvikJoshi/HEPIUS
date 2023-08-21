@@ -8,7 +8,7 @@ import os
 def get_img_list(directory):
     filepaths = []
     for filename in os.listdir(directory):
-        if filename.endswith("no_box.png"):
+        if filename.endswith("_no_box.png"):
             filepath = os.path.join(directory, filename)
             filepaths.append(filepath)
     return filepaths
@@ -237,11 +237,11 @@ if __name__ == "__main__":
         filtered_contours = isolate_contours(img, preprocessed_image, False, show_image)
         bboxes_list = draw_boxes(img, filtered_contours, show_image)
 
-        real_img = load_image(img_path[:-10]+'boxes.png')
+        real_img = load_image(img_path[:-11]+'_boxes.png')
         real_bboxes_list = find_boxes(real_img, show_image)
         
         iou_matrix, accuracy = calculate_iou_matrix(bboxes_list, real_bboxes_list, output_csv=True)
-        print(iou_matrix, accuracy)
+        print(img_path[59:-11] + ":", np.round(accuracy, 3), np.round(iou_matrix, 3))
 
     #     # 2_3mm_no_boxes -> threshold at 175, size (0.001, 0.1), circularity (0.1, 1), compactness (0.1, 1)
     #     # 2_20mm_no_boxes -> threshoold at 100, size (0.03, 1), circularity (0.03, 1), compactness (0.03, 1)
