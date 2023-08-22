@@ -3,7 +3,6 @@ import csv
 import numpy as np
 import config
 import os
-#from skimage.feature import greycomatrix, greycoprops
 
 def get_img_list(directory):
     filepaths = []
@@ -49,11 +48,14 @@ def create_contour_dictionaryList(contours):
         contours_dictionary_list.append(contour_dictionary)
     return contours_dictionary_list
 
-def filter_percent(contours_dictionary_list, area_percent=100, circularity_percent=100, compactness_percent=100):
+def filter_percent(contours_dictionary_list, area_percent=100, circularity_percent=100, compactness_percent=100, solidity_percent=100, majorAxisLength_percent=100, minorAxisLength_percent=100):
     filters = [
         ("area", area_percent),
         ("circularity", circularity_percent),
-        ("compactness", compactness_percent)
+        ("compactness", compactness_percent),
+        ("solidity", solidity_percent),
+        ("majorAxisLength", majorAxisLength_percent),
+        ("minorAxisLength", minorAxisLength_percent)
     ]
 
     filtered = contours_dictionary_list.copy()
@@ -65,11 +67,15 @@ def filter_percent(contours_dictionary_list, area_percent=100, circularity_perce
 
     return filtered
 
-def filter_top_n(contours_dictionary_list, area_idx=-1, circularity_idx = -1, compactness_idx=-1):
+
+def filter_top_n(contours_dictionary_list, area_idx=-1, circularity_idx=-1, compactness_idx=-1, solidity_idx=-1, majorAxisLength_idx=-1, minorAxisLength_idx=-1):
     filters = [
         ("area", area_idx),
         ("circularity", circularity_idx),
-        ("compactness", compactness_idx)
+        ("compactness", compactness_idx),
+        ("solidity", solidity_idx),
+        ("majorAxisLength", majorAxisLength_idx),
+        ("minorAxisLength", minorAxisLength_idx)
     ]
 
     filtered = contours_dictionary_list.copy()
@@ -81,11 +87,15 @@ def filter_top_n(contours_dictionary_list, area_idx=-1, circularity_idx = -1, co
 
     return filtered
 
-def filter_value(contours_dictionary_list, area_thresh=0, circularity_thresh=0, compactness_thresh=0):
+
+def filter_value(contours_dictionary_list, area_thresh=0, circularity_thresh=0, compactness_thresh=0, solidity_thresh=0, majorAxisLength_thresh=0, minorAxisLength_thresh=0):
     filters = [
         ("area", area_thresh),
         ("circularity", circularity_thresh),
-        ("compactness", compactness_thresh)
+        ("compactness", compactness_thresh),
+        ("solidity", solidity_thresh),
+        ("majorAxisLength", majorAxisLength_thresh),
+        ("minorAxisLength", minorAxisLength_thresh)
     ]
 
     filtered = contours_dictionary_list
@@ -95,11 +105,15 @@ def filter_value(contours_dictionary_list, area_thresh=0, circularity_thresh=0, 
     
     return filtered
 
-def filter_weighted(contours_dictionary_list, n=-1, area_weight=0, circularity_weight=0, compactness_weight=0):
+
+def filter_weighted(contours_dictionary_list, n=-1, area_weight=0, circularity_weight=0, compactness_weight=0, solidity_weight=0, majorAxisLength_weight=0, minorAxisLength_weight=0):
     filters = [
         ("area", area_weight),
         ("circularity", circularity_weight),
-        ("compactness", compactness_weight)
+        ("compactness", compactness_weight),
+        ("solidity", solidity_weight),
+        ("majorAxisLength", majorAxisLength_weight),
+        ("minorAxisLength", minorAxisLength_weight)
     ]
     
     if n == -1:
@@ -135,14 +149,24 @@ def preprocess(image, gauss_val, thresh_val, show_images=False): #input image
 
     return binary_image
 
+def sort_and_display_contours(image, contours_dictionary_list, sort_key, n=5):
+    sorted_contours = sorted(contours_dictionary_list, key=lambda contour: contour[sort_key], reverse=True)[:n]
+    sorted_contour_list = [contour["contour"] for contour in sorted_contours]
+    
+    sorted_image = np.copy(image)
+    cv2.drawContours(sorted_image, sorted_contour_list, -1, (255, 0, 0), 2)
+    
+    display_images([sorted_image])
+
 def isolate_contours(image, preprocessed_image, forCropping=False, show_images=True): #input preprocessed image
     contours, _ = cv2.findContours(preprocessed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours_dictionaryList = create_contour_dictionaryList(contours)
     if forCropping:
         filtered_dictionaryList = filter_top_n(contours_dictionaryList, 1, 1, 1)
     else:
-        filtered_dictionaryList = filter_value(contours_dictionaryList, 1000, 0, 0)
-        filtered_dictionaryList = filter_weighted(filtered_dictionaryList, 3, 1, 1, 1)
+        filtered_dictionaryList = contours_dictionaryList
+        filtered_dictionaryList = filter_weighted(filtered_dictionaryList, 3, 10, 1, 1)
+    #sort_and_display_contours(image, filtered_dictionaryList, 'minorAxisLength', 5) #for testing purposes
     filtered_contours = [contour["contour"] for contour in filtered_dictionaryList]
     if show_images:
         contours_image = np.copy(image)
@@ -224,6 +248,7 @@ def calculate_iou_matrix(estimate_bboxes, gt_bboxes, output_csv=False):
 if __name__ == "__main__":
     data_dir = "/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/datasets/"
     test_list = get_img_list(data_dir)
+    accuracy_list = []
     for img_path in test_list:
         show_image = False
 
@@ -241,7 +266,6 @@ if __name__ == "__main__":
         real_bboxes_list = find_boxes(real_img, show_image)
         
         iou_matrix, accuracy = calculate_iou_matrix(bboxes_list, real_bboxes_list, output_csv=True)
+        accuracy_list.append(accuracy)
         print(img_path[59:-11] + ":", np.round(accuracy, 3), np.round(iou_matrix, 3))
-
-    #     # 2_3mm_no_boxes -> threshold at 175, size (0.001, 0.1), circularity (0.1, 1), compactness (0.1, 1)
-    #     # 2_20mm_no_boxes -> threshoold at 100, size (0.03, 1), circularity (0.03, 1), compactness (0.03, 1)
+    print(round(np.mean(accuracy_list), 3))
