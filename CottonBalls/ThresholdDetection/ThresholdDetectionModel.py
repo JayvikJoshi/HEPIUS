@@ -238,7 +238,7 @@ def calculate_iou_matrix(estimate_bboxes, gt_bboxes, output_csv=False):
 
     if output_csv:
         data_to_append = iou_matrix + [accuracy]
-        csv_filename = "/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/output/output_csv.csv"
+        csv_filename = "/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/ThresholdDetection/output/output_csv.csv"
         with open(csv_filename, 'a', newline='') as csvfile:
             csv_writer = csv.writer(csvfile)
             csv_writer.writerow(data_to_append)
