@@ -1,6 +1,7 @@
 import os
 import glob
 from collections import Counter
+import shutil
 
 
 def get_txt_file_paths(folder_path):
@@ -53,10 +54,40 @@ def rename_file_with_content(file_path):
     os.rename(file_path, new_file_path)
     return new_file_path
 
+def count_files_in_image_folders(base_folder):
+    # Get a list of all subdirectories in the base folder
+    subfolders = [f.path for f in os.scandir(base_folder) if f.is_dir()]
+
+    # Iterate through the subfolders and count files in those starting with "images_"
+    for folder in subfolders:
+        folder_name = os.path.basename(folder)
+        if folder_name.startswith("images_"):
+            file_count = len(glob.glob(os.path.join(folder, '*')))
+            image_files = glob.glob(os.path.join(folder, '*.png'))
+            first_name = os.path.basename(image_files[0])[4:10]
+            print(f"Folder: {folder_name}. # of Files: {file_count}. ID: {first_name}")
+
+def copy_images_to_combined_folder(base_folder):
+    # Create the "combined" folder if it doesn't exist
+    combined_folder = os.path.join(base_folder, "combined")
+    if not os.path.exists(combined_folder):
+        os.makedirs(combined_folder)
+
+    # Get a list of all subdirectories in the base folder
+    subfolders = [f.path for f in os.scandir(base_folder) if f.is_dir()]
+
+    # Iterate through the subfolders and copy images from those starting with "images_"
+    for folder in subfolders:
+        folder_name = os.path.basename(folder)
+        if folder_name.startswith("images_"):
+            image_files = glob.glob(os.path.join(folder, '*.png'))  # Change the extension as needed
+            for image_file in image_files:
+                # Create a new file path in the "combined" folder
+                new_file_path = os.path.join(combined_folder, os.path.basename(image_file))
+                # Copy the image file to the "combined" folder
+                shutil.copy(image_file, new_file_path)
+                print(f"Copied '{image_file}' to 'combined' folder.")
 
 if __name__ == "__main__":
-    file_path="/Users/jayvik/Desktop/test_data.txt"
-    
-    new_file_path=rename_file_with_content(file_path)
-
-    isolate_txt(file_path)
+    folder_path="/Users/jayvik/Desktop/final/20230405"
+    count_files_in_image_folders(folder_path)
