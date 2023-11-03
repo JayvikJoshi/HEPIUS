@@ -2,7 +2,7 @@ import os
 import glob
 from collections import Counter
 import shutil
-
+from sklearn.model_selection import train_test_split
 
 def get_txt_file_paths(folder_path):
     return glob.glob(os.path.join(folder_path, '*.txt'))
@@ -55,7 +55,7 @@ def rename_file_with_content(file_path):
     return new_file_path
 
 def count_files_in_image_folders(base_folder):
-    # Get a list of all subdirectories in the base folder
+    data_dict = {}
     subfolders = [f.path for f in os.scandir(base_folder) if f.is_dir()]
 
     # Iterate through the subfolders and count files in those starting with "images_"
@@ -64,8 +64,45 @@ def count_files_in_image_folders(base_folder):
         if folder_name.startswith("images_"):
             file_count = len(glob.glob(os.path.join(folder, '*')))
             image_files = glob.glob(os.path.join(folder, '*.png'))
-            first_name = os.path.basename(image_files[0])[4:10]
-            print(f"Folder: {folder_name}. # of Files: {file_count}. ID: {first_name}")
+            ID = os.path.basename(image_files[0])[4:10]
+            data_dict[folder_name] = {
+                "FileCount": file_count,
+                "ID": ID
+            }
+
+            print(f"Folder: {folder_name}. # of Files: {file_count}. ID: {ID}")
+    
+    sorted_data_dict = dict(sorted(data_dict.items(), key=lambda item: int(item[1]["ID"])))
+
+    return sorted_data_dict
+
+def export_dict_to_txt(data_dict, file_path):
+    try:
+        with open(file_path, 'w') as file:
+            for folder_name, data in data_dict.items():
+                line = f"{folder_name},{data['FileCount']},{data['ID']}\n"
+                file.write(line)
+        print(f"Dictionary exported to '{file_path}")
+    except Exception as e:
+        print(f"Error exporting dictionary: {str(e)}")
+
+def read_dict_from_txt(file_path):
+    try:
+        data_dict = {}
+        with open(file_path, 'r') as file:
+            for line in file:
+                parts = line.strip().split(',')
+                if len(parts) == 3:
+                    folder_name, file_count, ID = parts
+                    data_dict[folder_name] = {
+                        "FileCount": int(file_count),
+                        "ID": ID
+                    }
+        print(f"Dictionary loaded from '{file_path}'")
+        return data_dict
+    except Exception as e:
+        print(f"Error loading dictionary: {str(e)}")
+        return None
 
 def copy_images_to_combined_folder(base_folder):
     # Create the "combined" folder if it doesn't exist
@@ -88,6 +125,104 @@ def copy_images_to_combined_folder(base_folder):
                 shutil.copy(image_file, new_file_path)
                 print(f"Copied '{image_file}' to 'combined' folder.")
 
+
+def rename_files(dir):
+    dates = [20230405, 20230412, 20230419, 20230426, 20230503]
+
+    cotton_ball_size_dict = {
+        "0": "1MM",
+        "1": "2MM",
+        "2": "3MM",
+        "3": "5MM",
+        "4": "10MM",
+        "5": "15MM",
+        "6": "20MM",
+        "999": "0MM"
+    }
+
+    for date in dates:
+        images_dir = dir + str(date) + "_images/"
+        annotations_dir = dir + str(date) + "_annotations/"
+
+        images = glob.glob(os.path.join(images_dir, '*.png'))
+        annotations = glob.glob(os.path.join(annotations_dir, '*.txt'))
+        mylist = []
+        for annotation in annotations:
+            with open(annotation, 'r') as file:
+                content = file.read()
+            lines = content.strip().split('\n')
+            print(lines)
+            if lines == ['']:
+                classes = [999]
+            else:
+                classes = [line.split()[0] for line in lines]
+            counts = Counter(classes)
+            sorted_counts = dict(sorted(counts.items()))
+
+            counts_string = [f"{count}_{cotton_ball_size_dict[f'{element}']}" for element, count in sorted_counts.items()]
+            new_filename_string = "_".join(counts_string)
+            if new_filename_string == "1_0MM":
+                new_filename_string = "0_0MM"
+            
+            old_filename = os.path.basename(annotation)
+            new_filename = os.path.join(new_filename_string + "_" + old_filename)
+            new_filename_path = os.path.join(annotations_dir, new_filename)
+            os.rename(annotation, new_filename_path)
+
+            image_path = os.path.join(images_dir, old_filename.replace(".txt", ".png"))
+            new_image_path = os.path.join(images_dir, new_filename.replace(".txt", ".png"))
+            os.rename(image_path, new_image_path)
+
+def partition(dir):
+    os.makedirs(dir + "paritioned_data/all_images")
+    os.makedirs(dir + "paritioned_data/all_annotations")
+
+    #copy images and annotations into folders called "all_images" and "all_annotations"
+    dates = [20230405, 20230412, 20230419, 20230426, 20230503]
+    for date in dates:
+        images_dir = dir + str(date) + "_images/"
+        annotations_dir = dir + str(date) + "_annotations/"
+
+        images = glob.glob(os.path.join(images_dir, '*.png'))
+        annotations = glob.glob(os.path.join(annotations_dir, '*.txt'))
+
+        for image in images:
+            shutil.copy(image, dir + "paritioned_data/all_images/")
+        for annotation in annotations:
+            shutil.copy(annotation, dir + "paritioned_data/all_annotations/")
+
+    images = glob.glob(os.path.join(dir + "paritioned_data/all_images/", '*.png'))
+    annotations = glob.glob(os.path.join(dir + "paritioned_data/all_annotations/", '*.txt'))
+
+    #create folders for train, test, and val
+    os.makedirs(dir + "paritioned_data/images/train")
+    os.makedirs(dir + "paritioned_data/images/test")
+    os.makedirs(dir + "paritioned_data/images/val")
+    os.makedirs(dir + "paritioned_data/annotations/train")
+    os.makedirs(dir + "paritioned_data/annotations/test")
+    os.makedirs(dir + "paritioned_data/annotations/val")
+
+    images.sort()
+    annotations.sort()
+
+    train_images, val_images, train_annotations, val_annotations = train_test_split(images, annotations, test_size = 0.3, random_state = 1) #70% train
+    val_images, test_images, val_annotations, test_annotations = train_test_split(val_images, val_annotations, test_size = 0.5, random_state = 1) #15% val, 15% test
+    
+    for train_image in train_images:
+        shutil.copy(train_image, dir + "paritioned_data/images/train/")
+    for train_annotation in train_annotations:
+        shutil.copy(train_annotation, dir + "paritioned_data/annotations/train/")
+    for val_image in val_images:
+        shutil.copy(val_image, dir + "paritioned_data/images/val/")
+    for val_annotation in val_annotations:
+        shutil.copy(val_annotation, dir + "paritioned_data/annotations/val/")
+    for test_image in test_images:
+        shutil.copy(test_image, dir + "paritioned_data/images/test/")
+    for test_annotation in test_annotations:
+        shutil.copy(test_annotation, dir + "paritioned_data/annotations/test/")
+
+
 if __name__ == "__main__":
-    folder_path="/Users/jayvik/Desktop/final/20230405"
-    count_files_in_image_folders(folder_path)
+    base_folder = "/Users/jayvik/Desktop/final/images_and_annotations/"
+    # rename_files(base_folder)
+    # partition(base_folder)
