@@ -224,5 +224,5 @@ def partition(dir):
 
 if __name__ == "__main__":
     base_folder = "/Users/jayvik/Desktop/final/images_and_annotations/"
-    # rename_files(base_folder)
-    # partition(base_folder)
+    rename_files(base_folder)
+    partition(base_folder)
