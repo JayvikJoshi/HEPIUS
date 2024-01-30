@@ -129,11 +129,11 @@ def copy_images_to_combined_folder(base_folder):
                 print(f"Copied '{image_file}' to 'combined' folder.")
 
 
-def rename_files(images_and_annotations_dir):
+def rename_files(images_and_annotations_dir, images_and_annotations_renamed_dir):
 
-    shutil.copytree(images_and_annotations_dir, images_and_annotations_dir + "_renamed")
+    shutil.copytree(images_and_annotations_dir, images_and_annotations_renamed_dir)
 
-    dir = images_and_annotations_dir + "_renamed/"
+    dir = images_and_annotations_renamed_dir
 
     dates = [20230405, 20230412, 20230419, 20230426, 20230503]
 
@@ -211,7 +211,9 @@ def partition(images_and_annotations_renamed_dir, filter_data_excel_path):
     images = glob.glob(os.path.join(dir + "partitioned_data/high_quality_images/", '*.png'))
 
     df = pd.read_excel(filter_data_excel_path)
-    remove_list = df['Get rid of'].tolist()
+    bad_images = df['Bad'].tolist()
+    okay_images = df['Okay'].tolist()
+    remove_list = bad_images + okay_images
     for image in images:
         filepath = os.path.basename(image)
         if filepath[-19:-4] in remove_list:
@@ -254,5 +256,5 @@ if __name__ == "__main__":
     images_and_annotations_dir = "/Users/jayvik/Desktop/Data/images_and_annotations/"
     images_and_annotations_renamed_dir = "/Users/jayvik/Desktop/Data/images_and_annotations_renamed/"
 
-
+    #rename_files(images_and_annotations_dir, images_and_annotations_renamed_dir)
     partition(images_and_annotations_renamed_dir, filter_data_excel_path)
