@@ -3,6 +3,9 @@ import glob
 from collections import Counter
 import shutil
 from sklearn.model_selection import train_test_split
+import pandas as pd
+import cv2
+
 
 def get_txt_file_paths(folder_path):
     return glob.glob(os.path.join(folder_path, '*.txt'))
@@ -126,7 +129,12 @@ def copy_images_to_combined_folder(base_folder):
                 print(f"Copied '{image_file}' to 'combined' folder.")
 
 
-def rename_files(dir):
+def rename_files(images_and_annotations_dir):
+
+    shutil.copytree(images_and_annotations_dir, images_and_annotations_dir + "_renamed")
+
+    dir = images_and_annotations_dir + "_renamed/"
+
     dates = [20230405, 20230412, 20230419, 20230426, 20230503]
 
     cotton_ball_size_dict = {
@@ -173,56 +181,78 @@ def rename_files(dir):
             new_image_path = os.path.join(images_dir, new_filename.replace(".txt", ".png"))
             os.rename(image_path, new_image_path)
 
-def partition(dir):
-    os.makedirs(dir + "paritioned_data/all_images")
-    os.makedirs(dir + "paritioned_data/all_annotations")
+def partition(images_and_annotations_renamed_dir, filter_data_excel_path):
+    
+    dir = "/Users/jayvik/Desktop/Data/"
+
+    os.makedirs(dir + "partitioned_data/all_images")
+    os.makedirs(dir + "partitioned_data/all_annotations")
 
     #copy images and annotations into folders called "all_images" and "all_annotations"
     dates = [20230405, 20230412, 20230419, 20230426, 20230503]
     for date in dates:
-        images_dir = dir + str(date) + "_images/"
-        annotations_dir = dir + str(date) + "_annotations/"
+        images_dir = images_and_annotations_renamed_dir + str(date) + "_images/"
+        annotations_dir = images_and_annotations_renamed_dir + str(date) + "_annotations/"
 
         images = glob.glob(os.path.join(images_dir, '*.png'))
         annotations = glob.glob(os.path.join(annotations_dir, '*.txt'))
 
         for image in images:
-            shutil.copy(image, dir + "paritioned_data/all_images/")
+            shutil.copy(image, dir + "partitioned_data/all_images/")
         for annotation in annotations:
-            shutil.copy(annotation, dir + "paritioned_data/all_annotations/")
+            shutil.copy(annotation, dir + "partitioned_data/all_annotations/")
 
-    images = glob.glob(os.path.join(dir + "paritioned_data/all_images/", '*.png'))
-    annotations = glob.glob(os.path.join(dir + "paritioned_data/all_annotations/", '*.txt'))
+    if not os.path.exists(dir + "partitioned_data/high_quality_images/"):
+        shutil.copytree(dir + "partitioned_data/all_images/", dir + "partitioned_data/high_quality_images/")
+    if not os.path.exists(dir + "partitioned_data/high_quality_annotations/"):
+        shutil.copytree(dir + "partitioned_data/all_annotations/", dir + "partitioned_data/high_quality_annotations/")
+
+
+    images = glob.glob(os.path.join(dir + "partitioned_data/high_quality_images/", '*.png'))
+
+    df = pd.read_excel(filter_data_excel_path)
+    remove_list = df['Get rid of'].tolist()
+    for image in images:
+        filepath = os.path.basename(image)
+        if filepath[-19:-4] in remove_list:
+            os.remove(image)
+            os.remove(dir + "partitioned_data/high_quality_annotations/" + filepath.replace(".png", ".txt"))
+
+    high_quality_images = glob.glob(os.path.join(dir + "partitioned_data/high_quality_images/", '*.png'))
+    high_quality_annotations = glob.glob(os.path.join(dir + "partitioned_data/high_quality_annotations/", '*.txt'))
 
     #create folders for train, test, and val
-    os.makedirs(dir + "paritioned_data/images/train")
-    os.makedirs(dir + "paritioned_data/images/test")
-    os.makedirs(dir + "paritioned_data/images/val")
-    os.makedirs(dir + "paritioned_data/annotations/train")
-    os.makedirs(dir + "paritioned_data/annotations/test")
-    os.makedirs(dir + "paritioned_data/annotations/val")
+    os.makedirs(dir + "partitioned_data/images/train")
+    os.makedirs(dir + "partitioned_data/images/test")
+    os.makedirs(dir + "partitioned_data/images/val")
+    os.makedirs(dir + "partitioned_data/annotations/train")
+    os.makedirs(dir + "partitioned_data/annotations/test")
+    os.makedirs(dir + "partitioned_data/annotations/val")
 
     images.sort()
     annotations.sort()
 
-    train_images, val_images, train_annotations, val_annotations = train_test_split(images, annotations, test_size = 0.3, random_state = 1) #70% train
+    train_images, val_images, train_annotations, val_annotations = train_test_split(high_quality_images, high_quality_annotations, test_size = 0.3, random_state = 1) #70% train
     val_images, test_images, val_annotations, test_annotations = train_test_split(val_images, val_annotations, test_size = 0.5, random_state = 1) #15% val, 15% test
     
     for train_image in train_images:
-        shutil.copy(train_image, dir + "paritioned_data/images/train/")
+        shutil.copy(train_image, dir + "partitioned_data/images/train/")
     for train_annotation in train_annotations:
-        shutil.copy(train_annotation, dir + "paritioned_data/annotations/train/")
+        shutil.copy(train_annotation, dir + "partitioned_data/annotations/train/")
     for val_image in val_images:
-        shutil.copy(val_image, dir + "paritioned_data/images/val/")
+        shutil.copy(val_image, dir + "partitioned_data/images/val/")
     for val_annotation in val_annotations:
-        shutil.copy(val_annotation, dir + "paritioned_data/annotations/val/")
+        shutil.copy(val_annotation, dir + "partitioned_data/annotations/val/")
     for test_image in test_images:
-        shutil.copy(test_image, dir + "paritioned_data/images/test/")
+        shutil.copy(test_image, dir + "partitioned_data/images/test/")
     for test_annotation in test_annotations:
-        shutil.copy(test_annotation, dir + "paritioned_data/annotations/test/")
-
+        shutil.copy(test_annotation, dir + "partitioned_data/annotations/test/") 
 
 if __name__ == "__main__":
-    base_folder = "/Users/jayvik/Desktop/final/images_and_annotations/"
-    rename_files(base_folder)
-    partition(base_folder)
+
+    filter_data_excel_path = "/Users/jayvik/Desktop/Data/CottonBallData_HEPIUS.xlsx"
+    images_and_annotations_dir = "/Users/jayvik/Desktop/Data/images_and_annotations/"
+    images_and_annotations_renamed_dir = "/Users/jayvik/Desktop/Data/images_and_annotations_renamed/"
+
+
+    partition(images_and_annotations_renamed_dir, filter_data_excel_path)
