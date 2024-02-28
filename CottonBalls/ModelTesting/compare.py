@@ -38,50 +38,35 @@ def draw_bounding_boxes(image, target_boxes, pred_boxes):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def compute_iou(pred_txt, target_txt):
-    
-    with open(target_txt, 'r') as file:
-        target_boxes_list = []
-        for line in file:
-            line_data = line.strip().split()
-            box = (float(line_data[1]), float(line_data[2]), float(line_data[3]), float(line_data[4]))
-            target_boxes_list.append(box)
-        
-    with open(pred_txt, 'r') as file:
-        num_boxes = 0
-        pred_boxes_list = []
-        for line in file:
-            line_data = line.strip().split()
-            box = (float(line_data[1]), float(line_data[2]), float(line_data[3]), float(line_data[4]))
-            pred_boxes_list.append(box)
-            num_boxes += 1
+def compute_iou(target_boxes, pred_boxes):
 
     iou_list = []
+    for box1 in target_boxes:
+        for box2 in pred_boxes:
+            
+            x1_box1, y1_box1, x2_box1, y2_box1 = box1
+            x1_box2, y1_box2, x2_box2, y2_box2 = box2
 
-    for box1 in target_boxes_list:
-        for box2 in pred_boxes_list:
-            x1_box1, y1_box1, w_box1, h_box1 = box1
-            x1_box2, y1_box2, w_box2, h_box2 = box2
-
-            x_left = max(x1_box1 - w_box1 / 2, x1_box2 - w_box2 / 2)
-            y_top = max(y1_box1 - h_box1 / 2, y1_box2 - h_box2 / 2)
-            x_right = min(x1_box1 + w_box1 / 2, x1_box2 + w_box2 / 2)
-            y_bottom = min(y1_box1 + h_box1 / 2, y1_box2 + h_box2 / 2)
-
-            if x_right < x_left or y_bottom < y_top:
+            if x1_box1 > x2_box2 or x2_box1 < x1_box2 or y1_box1 > y2_box2 or y2_box1 < y1_box2:
                 iou_list.append(0)
             else:
+                x_left = max(x1_box1, x1_box2)
+                x_right = min(x2_box1, x2_box2)
+                y_top = max(y1_box1, y1_box2)
+                y_bottom = min(y2_box1, y2_box2)
+
                 intersection_area = (x_right - x_left) * (y_bottom - y_top)
-                box1_area = w_box1 * h_box1
-                box2_area = w_box2 * h_box2
+                box1_area = (x2_box1 - x1_box1) * (y2_box1 - y1_box1)
+                box2_area = (x2_box2 - x1_box2) * (y2_box2 - y1_box2)
                 iou = intersection_area / (box1_area + box2_area - intersection_area)
-                iou_list.append(iou)
+                iou_list.append(round(iou, 3))
     print(iou_list)
-    print(heapq.nlargest(num_boxes, iou_list))
+    print(heapq.nlargest(len(target_boxes), iou_list))
 
 if __name__ == "__main__":
     img_path = "/Users/jayvik/Desktop/img.png"
     pred_txt = "/Users/jayvik/Desktop/pred.txt"
     target_txt = "/Users/jayvik/Desktop/targ.txt"
     image, target_boxes, pred_boxes = get_info(img_path, target_txt, pred_txt)
-    draw_bounding_boxes(image, target_boxes, pred_boxes)
+    #draw_bounding_boxes(image, target_boxes, pred_boxes)
+    compute_iou(target_boxes, pred_boxes)
