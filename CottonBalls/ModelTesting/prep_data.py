@@ -251,8 +251,8 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
                 os.remove(image)
                 os.remove(dir + "partitioned_data/filter_two_annotations/" + filepath.replace(".png", ".txt"))
 
-    filter_one_images = glob.glob(os.path.join(dir + "partitioned_data/filter_one_images/", '*.png'))
-    filter_one_annotations = glob.glob(os.path.join(dir + "partitioned_data/filter_one_annotations/", '*.txt'))
+    filter_two_images = glob.glob(os.path.join(dir + "partitioned_data/filter_two_images/", '*.png'))
+    filter_two_annotations = glob.glob(os.path.join(dir + "partitioned_data/filter_two_annotations/", '*.txt'))
 
     #create folders for train, test, and val
     os.makedirs(dir + "partitioned_data/images/train")
@@ -265,7 +265,7 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
     images.sort()
     annotations.sort()
 
-    train_images, val_images, train_annotations, val_annotations = train_test_split(filter_one_images, filter_one_annotations, test_size = 0.3, random_state = 1) #70% train
+    train_images, val_images, train_annotations, val_annotations = train_test_split(filter_two_images, filter_two_annotations, test_size = 0.3, random_state = 1) #70% train
     val_images, test_images, val_annotations, test_annotations = train_test_split(val_images, val_annotations, test_size = 0.5, random_state = 1) #15% val, 15% test
     
     for train_image in train_images:
