@@ -88,11 +88,10 @@ def display(img_folder, target_folder, pred_folder):
 
 
 if __name__ == "__main__":
-    # img_path = "/Users/jayvik/Desktop/img.png"
+    img_path = "/Users/jayvik/Desktop/img.png"
     # pred_txt = "/Users/jayvik/Desktop/pred.txt"
     # target_txt = "/Users/jayvik/Desktop/targ.txt"
     # image, target_boxes, pred_boxes = get_info(img_path, target_txt, pred_txt)
     # bb_image = draw_bounding_boxes(image, target_boxes, pred_boxes)
     # iou = compute_iou(target_boxes, pred_boxes)
-
     
