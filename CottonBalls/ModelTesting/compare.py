@@ -88,10 +88,26 @@ def display(img_folder, target_folder, pred_folder):
 
 
 if __name__ == "__main__":
-    img_path = "/Users/jayvik/Desktop/img.png"
-    # pred_txt = "/Users/jayvik/Desktop/pred.txt"
-    # target_txt = "/Users/jayvik/Desktop/targ.txt"
-    # image, target_boxes, pred_boxes = get_info(img_path, target_txt, pred_txt)
-    # bb_image = draw_bounding_boxes(image, target_boxes, pred_boxes)
-    # iou = compute_iou(target_boxes, pred_boxes)
-    
+
+    dir = "/Users/jayvik/Desktop/Data/test_3/partitioned_data/"
+    img_folder_path = dir + "filter_two_images/"
+    target_folder_path = dir + "filter_two_annotations/"
+    pred_folder_path = "predicted_annotations/"
+
+    bb_images = []
+
+    for img_file in os.listdir(img_folder_path):
+        if img_file.endswith(".png"):
+            img_path = os.path.join(img_folder_path, img_file)
+            target_path = os.path.join(target_folder_path, img_file[:-4] + ".txt")
+            pred_path = os.path.join(pred_folder_path, img_file[:-4] + ".txt")
+
+            image, target_boxes, pred_boxes = get_info(img_path, target_path, pred_path)
+            iou = compute_iou(target_boxes, pred_boxes)
+            bb_image = draw_bounding_boxes(image, target_boxes, pred_boxes, iou)
+            bb_images.append(bb_image)
+
+    for i, bb_image in enumerate(bb_images):
+        cv2.imshow(f"Bounding Box Image {i}", bb_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()

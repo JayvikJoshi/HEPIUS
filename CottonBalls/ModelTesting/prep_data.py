@@ -216,7 +216,8 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
         df = pd.read_excel(filter_one_data_excel_path)
         bad_images = df['Bad'].tolist()
         okay_images = df['Okay'].tolist()
-        remove_list = bad_images + okay_images
+        round3_images = df['Round3'].tolist()
+        remove_list = bad_images + okay_images + round3_images
         for image in images:
             filepath = os.path.basename(image)
             if filepath[-19:-4] in remove_list:
@@ -282,11 +283,11 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
         shutil.copy(test_annotation, dir + "partitioned_data/annotations/test/") 
 
 if __name__ == "__main__":
+    images_and_annotations_dir = "/Users/jayvik/Desktop/Data/images_and_annotations/"
 
     filter_one_data_excel_path = "/Users/jayvik/Desktop/Data/FilterOne_CottonBallData_HEPIUS.xlsx"
     filter_two_data_excel_path = "/Users/jayvik/Desktop/Data/FilterTwo_CottonBallData_HEPIUS.xlsx"
-    images_and_annotations_dir = "/Users/jayvik/Desktop/Data/images_and_annotations/"
     images_and_annotations_renamed_dir = "/Users/jayvik/Desktop/Data/images_and_annotations_renamed/"
 
-    #rename_files(images_and_annotations_dir, images_and_annotations_renamed_dir)
+    rename_files(images_and_annotations_dir, images_and_annotations_renamed_dir)
     partition(images_and_annotations_renamed_dir, filter_one_data_excel_path, filter_two_data_excel_path)
