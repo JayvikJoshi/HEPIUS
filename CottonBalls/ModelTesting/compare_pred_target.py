@@ -41,16 +41,31 @@ def draw_bounding_boxes(image, target_boxes, pred_boxes, iou):
     return image
 
 def compute_iou(target_boxes, pred_boxes):
-
     iou = []
+
+    if len(target_boxes) == 0:
+        if len(pred_boxes) == 0:
+            return [1]
+        else:
+            return [0] * len(pred_boxes)
+
+    if len(pred_boxes) < len(target_boxes):
+        for i in range(len(target_boxes)-len(pred_boxes)):
+            iou.append(0)
+    if len(pred_boxes) > len(target_boxes):
+        for i in range(len(pred_boxes)-len(target_boxes)):
+            iou.append(0)
+
+    iou_combinations = []
     for box1 in target_boxes:
         for box2 in pred_boxes:
             
-            x1_box1, y1_box1, x2_box1, y2_box1 = box1
-            x1_box2, y1_box2, x2_box2, y2_box2 = box2
+            x1_box1, y1_box1, x2_box1, y2_box1 = box1 #target
+            x1_box2, y1_box2, x2_box2, y2_box2 = box2 #pred
 
             if x1_box1 > x2_box2 or x2_box1 < x1_box2 or y1_box1 > y2_box2 or y2_box1 < y1_box2:
-                iou.append(0)
+                iou_combinations.append(0)
+
             else:
                 x_left = max(x1_box1, x1_box2)
                 x_right = min(x2_box1, x2_box2)
@@ -61,8 +76,10 @@ def compute_iou(target_boxes, pred_boxes):
                 box1_area = (x2_box1 - x1_box1) * (y2_box1 - y1_box1)
                 box2_area = (x2_box2 - x1_box2) * (y2_box2 - y1_box2)
                 iou_val = intersection_area / (box1_area + box2_area - intersection_area)
-                iou.append(round(iou_val, 3))
-    return heapq.nlargest(len(target_boxes), iou)
+                iou_combinations.append(round(iou_val, 3))
+    
+    iou += heapq.nlargest((len(pred_boxes)), iou_combinations)
+    return iou
 
 def display(img_folder, target_folder, pred_folder):
 
@@ -89,13 +106,20 @@ def display(img_folder, target_folder, pred_folder):
 
 if __name__ == "__main__":
 
-    dir = "/Users/jayvik/Desktop/Data/test_3/partitioned_data/"
-    img_folder_path = dir + "filter_two_images/"
-    target_folder_path = dir + "filter_two_annotations/"
-    pred_folder_path = dir + "filter_two_pred/"
+    dir = "/Users/jayvik/Desktop/Data/test_4/partitioned_data/"
+    img_folder_path = dir + "filter_three_removed/"
+    target_folder_path = dir + "filter_three_removed/"
+    pred_folder_path = dir + "filter_three_removed_pred/"
+
+
+    #final test
+    # img_folder_path = dir + "final_test_images_annotations/"
+    # target_folder_path = dir + "final_test_images_annotations/"
+    # pred_folder_path = dir + "final_test_images_annotations_pred/"
 
     bb_images = []
     ious = []
+    images_filepath = []
 
     for img_file in os.listdir(img_folder_path):
         if img_file.endswith(".png"):
@@ -106,26 +130,43 @@ if __name__ == "__main__":
             image, target_boxes, pred_boxes = get_info(img_path, target_path, pred_path)
             iou = compute_iou(target_boxes, pred_boxes)
             bb_image = draw_bounding_boxes(image, target_boxes, pred_boxes, iou)
-            bb_images.append(bb_image)
-            ious.append(iou)
+            exclude = False
+            for i in iou:
+                if i < 0.5:
+                    exclude = True
+            if exclude == False:
+                bb_images.append(bb_image)
+                ious.append(iou)
+                images_filepath.append(img_file)
 
-    for i, bb_image in enumerate(bb_images):
-        #go through images forward and backward
-        cv2.imshow(f"Bounding Box Image {i}", bb_image)
+    image_index = 0
+    readd = images_filepath.copy()
+    while True:
+        bb_image = bb_images[image_index]  # Get current image
+        cv2.imshow(f"Bounding Box Image {image_index}, IOU: {ious[image_index]}, filepath: {images_filepath[image_index]}", bb_image)
         key = cv2.waitKey(0)
-        if key == ord('a') and i > 0:
-            i -= 1
-        elif key == ord('d') and i < len(bb_images) - 1:
-            i += 1
-        if key == ord('q'):
+        if key == ord('a') and image_index > 0:
+            image_index -= 1
+        elif key == ord('d') and image_index < len(bb_images) - 1:
+            image_index += 1
+        elif key == ord('r'):
+            readd.pop(image_index)
+            image_index += 1
+        elif key == ord('q'):
             break
         cv2.destroyAllWindows()
 
-        
-
-
-
+    # bb_86
     
     print(ious)
     avg_iou = sum([sum(iou) for iou in ious]) / sum([len(iou) for iou in ious])
-    print(avg_iou)
+    iou_has_0 = 0
+    iou_doesnt_have_0 = 0
+    for iou in ious:
+        if iou.count(0) != 0:
+            iou_has_0 += 1
+        if iou.count(0) == 0:
+            iou_doesnt_have_0 += 1
+    print(avg_iou, iou_has_0, iou_doesnt_have_0)
+    print(images_filepath)
+    #print(readd)

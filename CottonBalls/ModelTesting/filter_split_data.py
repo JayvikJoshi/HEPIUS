@@ -208,7 +208,8 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
             shutil.copytree(dir + "partitioned_data/all_images/", dir + "partitioned_data/filter_one_images/")
         if not os.path.exists(dir + "partitioned_data/filter_one_annotations/"):
             shutil.copytree(dir + "partitioned_data/all_annotations/", dir + "partitioned_data/filter_one_annotations/")
-
+        if not os.path.exists(dir + "partitioned_data/filter_one_removed/"):
+            os.makedirs(dir + "partitioned_data/filter_one_removed")
 
         images = glob.glob(os.path.join(dir + "partitioned_data/filter_one_images/", '*.png'))
 
@@ -216,13 +217,17 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
         df = pd.read_excel(filter_one_data_excel_path)
         bad_images = df['Bad'].tolist()
         okay_images = df['Okay'].tolist()
-        round3_images = df['Round3'].tolist()
-        remove_list = bad_images + okay_images + round3_images
+        remove_list = bad_images + okay_images
         for image in images:
             filepath = os.path.basename(image)
             if filepath[-19:-4] in remove_list:
+                shutil.copy(image, dir + "partitioned_data/filter_one_removed/")
+                shutil.copy(dir + "partitioned_data/filter_one_annotations/" + filepath.replace(".png", ".txt"), dir + "partitioned_data/filter_one_removed/")
                 os.remove(image)
                 os.remove(dir + "partitioned_data/filter_one_annotations/" + filepath.replace(".png", ".txt"))
+
+    filter_one_images = glob.glob(os.path.join(dir + "partitioned_data/filter_one_images/", '*.png'))
+    filter_one_annotations = glob.glob(os.path.join(dir + "partitioned_data/filter_one_annotations/", '*.txt'))
 
     #second round of filtering - gets rid of images with incorrect number of objects
     if filter_two_data_excel_path != 0:
@@ -230,6 +235,8 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
             shutil.copytree(dir + "partitioned_data/filter_one_images/", dir + "partitioned_data/filter_two_images/")
         if not os.path.exists(dir + "partitioned_data/filter_two_annotations/"):
             shutil.copytree(dir + "partitioned_data/filter_one_annotations/", dir + "partitioned_data/filter_two_annotations/")
+        if not os.path.exists(dir + "partitioned_data/filter_two_removed/"):
+            os.makedirs(dir + "partitioned_data/filter_two_removed")
         
         images = glob.glob(os.path.join(dir + "partitioned_data/filter_two_images/", '*.png'))
 
@@ -249,11 +256,65 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
             # print(labelled_objects)
 
             if labelled_objects != compare_dict[image_id]:
+                shutil.copy(image, dir + "partitioned_data/filter_two_removed/")
+                shutil.copy(dir + "partitioned_data/filter_two_annotations/" + filepath.replace(".png", ".txt"), dir + "partitioned_data/filter_two_removed/")
                 os.remove(image)
                 os.remove(dir + "partitioned_data/filter_two_annotations/" + filepath.replace(".png", ".txt"))
 
     filter_two_images = glob.glob(os.path.join(dir + "partitioned_data/filter_two_images/", '*.png'))
     filter_two_annotations = glob.glob(os.path.join(dir + "partitioned_data/filter_two_annotations/", '*.txt'))
+
+    #3rd round of filtering
+    if filter_one_data_excel_path != 0:
+        if not os.path.exists(dir + "partitioned_data/filter_three_images/"):
+            shutil.copytree(dir + "partitioned_data/filter_two_images/", dir + "partitioned_data/filter_three_images/")
+        if not os.path.exists(dir + "partitioned_data/filter_three_annotations/"):
+            shutil.copytree(dir + "partitioned_data/filter_two_annotations/", dir + "partitioned_data/filter_three_annotations/")
+        if not os.path.exists(dir + "partitioned_data/filter_three_removed/"):
+            os.makedirs(dir + "partitioned_data/filter_three_removed")
+
+        images = glob.glob(os.path.join(dir + "partitioned_data/filter_three_images/", '*.png'))
+
+        df = pd.read_excel(filter_one_data_excel_path)
+        round3_filter = df['Round3'].tolist()
+        remove_list = round3_filter
+        for image in images:
+            filepath = os.path.basename(image)
+            if filepath[-19:-4] in remove_list:
+                shutil.copy(image, dir + "partitioned_data/filter_three_removed/")
+                shutil.copy(dir + "partitioned_data/filter_three_annotations/" + filepath.replace(".png", ".txt"), dir + "partitioned_data/filter_three_removed/")
+                os.remove(image)
+                os.remove(dir + "partitioned_data/filter_three_annotations/" + filepath.replace(".png", ".txt"))
+
+    filter_three_images = glob.glob(os.path.join(dir + "partitioned_data/filter_three_images/", '*.png'))
+    filter_three_annotations = glob.glob(os.path.join(dir + "partitioned_data/filter_three_annotations/", '*.txt'))
+
+    #filter 4: readd images
+    if filter_one_data_excel_path != 0:
+        if not os.path.exists(dir + "partitioned_data/filter_four_images/"):
+            shutil.copytree(dir + "partitioned_data/filter_three_images/", dir + "partitioned_data/filter_four_images/")
+        if not os.path.exists(dir + "partitioned_data/filter_four_annotations/"):
+            shutil.copytree(dir + "partitioned_data/filter_three_annotations/", dir + "partitioned_data/filter_four_annotations/")
+        if not os.path.exists(dir + "partitioned_data/filter_four_readded/"):
+            os.makedirs(dir + "partitioned_data/filter_four_readded")
+
+        images = glob.glob(os.path.join(dir + "partitioned_data/all_images/", '*.png'))
+        
+        df = pd.read_excel(filter_one_data_excel_path)
+        round4_filter = df['Readd_Round4'].tolist()
+        for image in images:
+            filepath = os.path.basename(image)
+            if filepath[-19:-4] in round4_filter:
+                shutil.copy(image, dir + "partitioned_data/filter_four_readded/")
+                shutil.copy(dir + "partitioned_data/all_annotations/" + filepath.replace(".png", ".txt"), dir + "partitioned_data/filter_four_readded/")
+                shutil.copy(image, dir + "partitioned_data/filter_four_images/")
+                shutil.copy(dir + "partitioned_data/all_annotations/" + filepath.replace(".png", ".txt"), dir + "partitioned_data/filter_four_annotations/")
+
+    filter_four_images = glob.glob(os.path.join(dir + "partitioned_data/filter_four_images", '*.png'))
+    filter_four_annotations = glob.glob(os.path.join(dir + "partitioned_data/filter_four_annotations/", '*.txt'))
+
+    filtered_images = filter_four_images
+    filtered_annotations = filter_four_annotations
 
     #create folders for train, test, and val
     image_train_folder = dir + "partitioned_data/images/train"
@@ -290,8 +351,11 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
     # check_images_annotations(filter_two_images, filter_two_annotations)
 
     #split data into train, test, and val
-    train_images, test_images = train_test_split(filter_two_images, test_size=0.15, random_state=42)
-    train_images, val_images = train_test_split(train_images, test_size=0.2, random_state=42)
+    test_dataset_size = 0.15
+    val_dataset_size = 0.15
+
+    train_images, test_images = train_test_split(filtered_images, test_size=test_dataset_size, random_state=42)
+    train_images, val_images = train_test_split(train_images, test_size=(val_dataset_size/(1-test_dataset_size)), random_state=42)
 
     #print(len(train_images), len(test_images), len(val_images))
 
@@ -315,10 +379,10 @@ def partition(images_and_annotations_renamed_dir, filter_one_data_excel_path=0, 
 
 if __name__ == "__main__":
     images_and_annotations_dir = "/Users/jayvik/Desktop/Data/images_and_annotations/"
+    images_and_annotations_renamed_dir = "/Users/jayvik/Desktop/Data/images_and_annotations_renamed/"
 
     filter_one_data_excel_path = "/Users/jayvik/Desktop/Data/FilterOne_CottonBallData_HEPIUS.xlsx"
     filter_two_data_excel_path = "/Users/jayvik/Desktop/Data/FilterTwo_CottonBallData_HEPIUS.xlsx"
-    images_and_annotations_renamed_dir = "/Users/jayvik/Desktop/Data/images_and_annotations_renamed/"
 
     #rename_files(images_and_annotations_dir, images_and_annotations_renamed_dir)
     partition(images_and_annotations_renamed_dir, filter_one_data_excel_path, filter_two_data_excel_path)

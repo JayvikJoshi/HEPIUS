@@ -4,8 +4,14 @@ import cv2
 
 model = YOLO('/Users/jayvik/Documents/GitHub/HEPIUS/CottonBalls/ModelTesting/cleaned_best.pt')
 
-dir = "/Users/jayvik/Desktop/Data/test_3/partitioned_data/filter_two_images/"
-output_dir = "/Users/jayvik/Desktop/Data/test_3/partitioned_data/filter_two_pred/"  # Specify the output folder where you want to save the .txt files
+dir = "/Users/jayvik/Desktop/Data/test_4/partitioned_data/filter_three_removed/"
+output_dir = "/Users/jayvik/Desktop/Data/test_4/partitioned_data/filter_three_removed_pred/"  # Specify the output folder where you want to save the .txt files
+
+dir = "/Users/jayvik/Desktop/Data/test_4/partitioned_data/final_test_images_annotations/"
+output_dir = "/Users/jayvik/Desktop/Data/test_4/partitioned_data/final_test_images_annotations_pred/"
+
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 image_paths = []
 
